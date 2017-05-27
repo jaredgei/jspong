@@ -1,0 +1,186 @@
+<html>
+<head>
+	<title>Pong!</title>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+const PADDLE_HEIGHT = 100;
+const PADDLE_WIDTH = 10;
+const COMPUTER_PADDLE_SPEED = 8;
+const WINNING_SCORE = 5;
+const DEFAULT_Y_SPEED = 4;
+
+let canvas;
+let canvasContext;
+
+let ballX;
+let ballY;
+let ballSpeedX = -10;
+let ballSpeedY = DEFAULT_Y_SPEED;
+
+let playerPaddleY = 250;
+let computerPaddleY = 250;
+
+let playerScore = 0;
+let computerScore = 0;
+
+let paused = true;
+
+window.onload = function () {
+	canvas = document.getElementById('gameCanvas');
+	canvasContext = canvas.getContext('2d');
+	resetBall();
+
+	setInterval(function () {
+		move();
+		draw();
+	}, 1000 / 30); // 30 Frames per second
+
+	canvas.addEventListener('mouseup', unpause);
+	canvas.addEventListener('mousemove', movePaddle);
+};
+
+const move = function () {
+	if (paused) { // If the game is paused, don't update the game
+		return;
+	}
+
+	moveComputerPaddle();
+
+	ballX += ballSpeedX;
+	ballY += ballSpeedY;
+
+	// When the ball touches the left edge
+	if (ballX < PADDLE_WIDTH) {
+		// Check if it's touching the players paddle
+		if (ballY > playerPaddleY && ballY < playerPaddleY + PADDLE_HEIGHT) {
+			reverseBallDirectionX();
+			// Calculate Y velocity based on what part of the paddle gets hit
+			const deltaY = ballY - (playerPaddleY + (PADDLE_HEIGHT / 2));
+			ballSpeedY = deltaY * 0.35;
+
+		} else {
+			computerScore++;
+			resetBall();
+		}
+	}
+
+	// When the ball touches the right edge
+	if (ballX > canvas.width - PADDLE_WIDTH) {
+		// Check if it's touching the computer paddle
+		if (ballY > computerPaddleY && ballY < computerPaddleY + PADDLE_HEIGHT) {
+			reverseBallDirectionX();
+			// Calculate Y velocity based on what part of the paddle gets hit
+			const deltaY = ballY - (computerPaddleY + (PADDLE_HEIGHT / 2));
+			ballSpeedY = deltaY * 0.35;
+		} else {
+			playerScore++;
+			resetBall();
+		}
+	}
+
+	if (ballY >  canvas.height || ballY < 0) {
+		ballSpeedY = -ballSpeedY;
+	}
+};
+
+const draw = function () {
+	// Create canvas
+	createRect(0, 0, canvas.width, canvas.height, '#000000');
+
+	// Create titles
+	if (paused) {
+		if (playerScore >= WINNING_SCORE) { // Player won
+			createText('You Win! Click to continue', 300, 350, '#ffffff');
+		} else if (computerScore >= WINNING_SCORE) { // Computer won
+			createText('You Lose :(. Click to continue', 300, 350, '#ffffff');
+		} else { // Game just started
+			createText('Welcome! Click to begin', 300, 350, '#ffffff')
+		}
+		return;
+	}
+
+	// Create board
+	createRect(0, 0, canvas.width / 2, canvas.height, 'rgba(102, 204, 255, 0.2)');
+	createRect(canvas.width / 2, 0, canvas.width / 2, canvas.height, 'rgba(255, 102, 102, 0.2)');
+
+	// Create paddles
+	createRect(0, playerPaddleY, PADDLE_WIDTH, 100, '#66ccff'); // Player
+	createRect(canvas.width - PADDLE_WIDTH, computerPaddleY, PADDLE_WIDTH, 100, '#ff6666'); // Computer
+
+	// Create ball
+	createCircle(ballX, ballY, 5, '#ffffff');
+
+	// Create scores
+	createText(playerScore, 50, 50, '#ffffff');
+	createText(computerScore, canvas.width - 50, 50, '#ffffff');
+};
+
+const unpause = function (event) {
+	if (!paused) {
+		return;
+	}
+
+	playerScore = 0;
+	computerScore = 0;
+	paused = false;
+};
+
+const movePaddle = function (event) {
+	const rect = canvas.getBoundingClientRect();
+	const root = document.documentElement;
+	const mouseY = event.clientY - rect.top - root.scrollTop;
+
+	// Set the center of the paddle equal to the mouse position
+	playerPaddleY = mouseY - (PADDLE_HEIGHT / 2);
+};
+
+const moveComputerPaddle = function (event) {
+	const computerPaddleYCenter = computerPaddleY + (PADDLE_HEIGHT / 2);
+	const closeEnough = PADDLE_HEIGHT / 3;
+	if (computerPaddleYCenter < ballY - closeEnough) {
+		computerPaddleY += COMPUTER_PADDLE_SPEED;
+	} else if (computerPaddleYCenter > ballY + closeEnough) {
+		computerPaddleY -= COMPUTER_PADDLE_SPEED;
+	}
+};
+
+const resetBall = function () {
+	if (playerScore >= WINNING_SCORE || computerScore >= WINNING_SCORE) {
+		paused = true;
+	}
+
+	// Reverse ball direction so player who just scored gets first hit
+	reverseBallDirectionX(); 
+	// Reset Y speed
+	ballSpeedY = DEFAULT_Y_SPEED;
+	// Center ball
+	ballX = canvas.width / 2;
+	ballY = canvas.height / 2;
+};
+
+const reverseBallDirectionX = function () {
+	ballSpeedX = -ballSpeedX;
+};
+
+const createRect = function (x, y, width, height, color) {
+	canvasContext.fillStyle = color;
+	canvasContext.fillRect(x, y, width, height);
+};
+
+const createCircle = function (x, y, radius, color) {
+	canvasContext.fillStyle = color;
+	canvasContext.beginPath();
+	canvasContext.arc(x, y, radius, 0, 2*Math.PI, true);
+	canvasContext.fill();
+};
+
+const createText = function (text, x, y, color) {
+	canvasContext.fillStyle = color;
+	canvasContext.fillText(text, x, y);
+};
+
+</script>
+</body>
+</html>
